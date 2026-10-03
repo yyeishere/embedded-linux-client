@@ -67,6 +67,12 @@ int main(void) {
     for (int i = 0; i < 3; i++) {
         strcpy(last_values[i], "--");
     }
+
+    char acc[3][512];
+    int acc_len[3];
+    for (int i = 0; i < 3; i++) {
+        acc_len[i] = 0;
+    }
     
     long long next_deadline = time_calculator() + CLIENT1_WINDOW_MS;
 
@@ -85,21 +91,32 @@ int main(void) {
 
         for (int i = 0; i < 3; i++) {
             if (sockets[i].revents & POLLIN) {
-                char buffer[256];
-                ssize_t n = read(sockets[i].fd, buffer, sizeof(buffer) - 1);
+                ssize_t n = read(sockets[i].fd, acc[i] + acc_len[i], sizeof(acc[i]) - acc_len[i] - 1);
 
                 if (n > 0) {
-                    buffer[n] = '\0';
-                    size_t len = strlen(buffer);
-                    while (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
-                        buffer[--len] = '\0';
+                    acc_len[i] += n;
+                    acc[i][acc_len[i]] = '\0';
+
+                    char *last_nl = strrchr(acc[i], '\n');
+                    if (last_nl != NULL) {
+                        *last_nl = '\0';
+                        char *prev_nl = strrchr(acc[i], '\n');
+                        char *value = prev_nl ? prev_nl + 1 : acc[i];
+
+                        size_t vlen = strlen(value);
+                        if (vlen > 0 && value[vlen - 1] == '\r') {
+                            value[vlen - 1] = '\0';
+                        }
+
+                        strncpy(last_values[i], value, sizeof(last_values[i]) - 1);
+                        last_values[i][sizeof(last_values[i]) - 1] = '\0';
+
+                        char *leftover = last_nl + 1;
+                        int leftover_len = acc_len[i] - (int)(leftover - acc[i]);
+                        memmove(acc[i], leftover, leftover_len);
+                        acc_len[i] = leftover_len;
+                        acc[i][acc_len[i]] = '\0';
                     }
-
-                    char *last_line = strrchr(buffer, '\n');
-                    char *value = last_line ? last_line + 1 : buffer;
-
-                    strncpy(last_values[i], value, sizeof(last_values[i]) - 1);
-                    last_values[i][sizeof(last_values[i]) - 1] = '\0';
                 }
             }
 
