@@ -16,7 +16,17 @@
 #define PORT_3 4003
 
 
+// control channel (client2)
+#define CONTROL_PORT 4000
+#define OUTPUT1_OBJECT 1
+#define PROP_FREQUENCY 255
+#define PROP_AMPLITUDE 170
+#define OUT3_THRESHOLD 3.0
 
+#define FREQ_HIGH 1000
+#define AMP_HIGH 8000
+#define FREQ_LOW 2000
+#define AMP_LOW 4000
 
 
 

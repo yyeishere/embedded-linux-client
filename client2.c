@@ -8,6 +8,7 @@
 
 #include <poll.h>
 #include <time.h>
+#include <stdint.h>
 
 #include "clients.h"
 
@@ -32,6 +33,12 @@ int connect_to_port(int port) {
     }
 
     return socketno;
+}
+
+
+void send_write(int sock, struct sockaddr_in *server, uint16_t object, uint16_t property, uint16_t value) {
+    uint16_t msg[4] = { htons(2), htons(object), htons(property), htons(value) };
+    sendto(sock, msg, sizeof(msg), 0, (struct sockaddr *)server, sizeof(*server));
 }
 
 
@@ -73,6 +80,20 @@ int main(void) {
     for (int i = 0; i < 3; i++) {
         acc_len[i] = 0;
     }
+
+    int control_sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (control_sock < 0) {
+        perror("control socket");
+        return 1;
+    }
+
+    struct sockaddr_in control_addr;
+    memset(&control_addr, 0, sizeof(control_addr));
+    control_addr.sin_family = AF_INET;
+    control_addr.sin_port = htons(CONTROL_PORT);
+    inet_pton(AF_INET, "127.0.0.1", &control_addr.sin_addr);
+
+    int control_state = -1;
     
     long long next_deadline = time_calculator() + CLIENT2_WINDOW_MS;
 
@@ -123,8 +144,29 @@ int main(void) {
         }
 
         if (time_calculator() >= next_deadline) {
+
             printf("{\"timestamp\": %lld, \"out1\": \"%s\", \"out2\": \"%s\", \"out3\": \"%s\"}\n",timestamp_calculator(), last_values[0], last_values[1], last_values[2]);
             fflush(stdout);
+
+            if (strcmp(last_values[2], "--") != 0) {
+
+                double out3 = atof(last_values[2]);
+                int new_state = (out3 >= OUT3_THRESHOLD) ? 1 : 0;
+                if (new_state != control_state) {
+
+
+                    if (new_state == 1) {
+
+                        send_write(control_sock, &control_addr, OUTPUT1_OBJECT, PROP_FREQUENCY, FREQ_HIGH);
+                        send_write(control_sock, &control_addr, OUTPUT1_OBJECT, PROP_AMPLITUDE, AMP_HIGH);
+                    } else {
+
+                        send_write(control_sock, &control_addr, OUTPUT1_OBJECT, PROP_FREQUENCY, FREQ_LOW);
+                        send_write(control_sock, &control_addr, OUTPUT1_OBJECT, PROP_AMPLITUDE, AMP_LOW);
+                    }
+                    control_state = new_state;
+                }
+            }
 
             for (int i = 0; i < 3; i++) {
                 strcpy(last_values[i], "--");
@@ -136,5 +178,6 @@ int main(void) {
     for (int i = 0; i < 3; i++) {
         close(sockets[i].fd);
     }
+    close(control_sock);
     return 0;
 }
