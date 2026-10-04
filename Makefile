@@ -9,3 +9,6 @@ client2: client2.c clients.h
 
 udptest: udptest.c
 	$(CC) $(CFLAGS) -o udptest udptest.c
+
+analyze: analyze.c clients.h
+	$(CC) $(CFLAGS) -o analyze analyze.c
