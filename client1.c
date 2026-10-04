@@ -35,14 +35,14 @@ int connect_to_port(int port) {
 }
 
 
-long long time_calculator(void) {  //long long to prevent overflow might change the algorithm later
+long long time_calculator(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 
-long long timestamp_calculator(void) { // bu da long long olacak
+long long timestamp_calculator(void) {
     struct timespec ts;
     clock_gettime(CLOCK_REALTIME, &ts);
     return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
